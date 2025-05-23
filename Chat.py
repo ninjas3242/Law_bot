@@ -19,18 +19,28 @@ if sys.platform.startswith('win'):
 load_dotenv()
 
 # Get Firebase credential path and Gemini API key from Streamlit secrets or fallback to env
-firebase_cred_path = st.secrets.get("FIREBASE_CREDENTIALS_PATH") or os.getenv("FIREBASE_CREDENTIALS_PATH")
+firebase_cred_dict = st.secrets.get("firebase")  # This is the full dict with keys like project_id, private_key, etc.
+if firebase_cred_dict is None:
+    st.error("Firebase credentials not found in secrets!")
+    st.stop()
+
+cred = credentials.Certificate(firebase_cred_dict)
+firebase_admin.initialize_app(cred)
 gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 # Firebase init
 if not firebase_admin._apps:
     try:
-        # Load credentials JSON file path from env/secrets
-        cred = credentials.Certificate(firebase_cred_path)
+        firebase_cred_dict = st.secrets.get("firebase")
+        if not firebase_cred_dict:
+            st.error("Firebase credentials missing in secrets!")
+            st.stop()
+        cred = credentials.Certificate(firebase_cred_dict)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"Firebase initialization failed: {e}")
         st.stop()
+
 
 db = firestore.client()
 
