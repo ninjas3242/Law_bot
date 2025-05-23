@@ -18,47 +18,21 @@ if sys.platform.startswith('win'):
 # Load .env locally (ignored in deployment)
 load_dotenv()
 
-# Get Firebase credential from Streamlit secrets or fallback to env
-firebase_cred_raw = st.secrets.get("firebase")  # Could be dict or string
+# Get Firebase credential path and Gemini API key from Streamlit secrets or fallback to env
+firebase_cred_path = st.secrets.get("FIREBASE_CREDENTIALS_PATH") or os.getenv("FIREBASE_CREDENTIALS_PATH")
+gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
-if firebase_cred_raw is None:
-    st.error("Firebase credentials not found in secrets!")
-    st.stop()
-if isinstance(firebase_cred_raw, str):
-    try:
-        firebase_cred_dict = json.loads(firebase_cred_raw)
-    except json.JSONDecodeError as e:
-        st.error(f"Failed to parse Firebase credentials JSON: {e}")
-        st.stop()
-else:
-    # Convert AttrDict or similar to plain dict recursively
-    def to_dict(d):
-        if isinstance(d, dict):
-            return {k: to_dict(v) for k, v in d.items()}
-        elif hasattr(d, "_items") or hasattr(d, "_asdict"):  # for namedtuple, AttrDict etc.
-            return to_dict(dict(d))
-        else:
-            return d
-
-    firebase_cred_dict = to_dict(firebase_cred_raw)
+# Firebase init
 if not firebase_admin._apps:
     try:
-        cred = credentials.Certificate(firebase_cred_dict)
+        # Load credentials JSON file path from env/secrets
+        cred = credentials.Certificate(firebase_cred_path)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"Firebase initialization failed: {e}")
         st.stop()
 
 db = firestore.client()
-
-# Gemini API key
-gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
-
-# API Configuration
-genai.configure(api_key=gemini_api_key)
-
-# Your remaining code (MODEL_CONFIG, helper functions, UI, main, etc.) unchanged...
-
 
 # API Configuration
 genai.configure(api_key=gemini_api_key)
