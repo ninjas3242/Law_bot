@@ -18,16 +18,24 @@ if sys.platform.startswith('win'):
 # Load .env locally (ignored in deployment)
 load_dotenv()
 
-# Get Firebase credential path and Gemini API key from Streamlit secrets or fallback to env
-firebase_cred_path = st.secrets.get("FIREBASE_CREDENTIALS_PATH") or os.getenv("FIREBASE_CREDENTIALS_PATH")
+# Get Gemini API key from Streamlit secrets or fallback to env
 gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 # Firebase init
 if not firebase_admin._apps:
     try:
-        # Load credentials JSON file path from env/secrets
-        cred = credentials.Certificate(firebase_cred_path)
+        # Try to get Firebase credentials from Streamlit secrets first
+        if "firebase_credentials" in st.secrets:
+            # Use credentials directly from Streamlit secrets
+            firebase_creds = dict(st.secrets["firebase_credentials"])
+            cred = credentials.Certificate(firebase_creds)
+        else:
+            # Fallback to file path for local development
+            firebase_cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "firebase_credentials.json")
+            cred = credentials.Certificate(firebase_cred_path)
+        
         firebase_admin.initialize_app(cred)
+        st.success("✅ Firebase initialized successfully!")
     except Exception as e:
         st.error(f"Firebase initialization failed: {e}")
         st.stop()
