@@ -8,6 +8,7 @@ import os
 import json
 import re
 from dotenv import load_dotenv
+import tempfile
 
 # -------------- Configuration --------------
 st.set_page_config(page_title="KynoHealth Chatbot", page_icon="💬", layout="wide")
@@ -35,11 +36,20 @@ if isinstance(firebase_cred_raw, str):
 else:
     firebase_cred_dict = firebase_cred_raw
 
-# Initialize Firebase app only once
+# Initialize Firebase app only once, using a temp JSON file for credentials
 if not firebase_admin._apps:
     try:
-        cred = credentials.Certificate(firebase_cred_dict)
+        # Write the credentials dict to a temporary JSON file
+        with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', delete=False) as temp_cred_file:
+            json.dump(firebase_cred_dict, temp_cred_file)
+            temp_cred_file_path = temp_cred_file.name
+
+        cred = credentials.Certificate(temp_cred_file_path)
         firebase_admin.initialize_app(cred)
+        
+        # Optionally delete the temp file after initialization
+        os.remove(temp_cred_file_path)
+
     except Exception as e:
         st.error(f"Firebase initialization failed: {e}")
         st.stop()
@@ -48,12 +58,6 @@ db = firestore.client()
 
 # Gemini API key
 gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
-
-# API Configuration
-genai.configure(api_key=gemini_api_key)
-
-# Your remaining code (MODEL_CONFIG, helper functions, UI, main, etc.) unchanged...
-
 
 # API Configuration
 genai.configure(api_key=gemini_api_key)
@@ -138,7 +142,7 @@ def login_page():
                                 st.session_state.user_logged_in = True
                                 st.session_state.user_email = email
                                 st.session_state.role = user_doc.get("role", "free").lower()
-                                st.rerun()
+                                st.experimental_rerun()
                             else:
                                 st.error("❌ Incorrect password.")
                         else:
@@ -163,7 +167,7 @@ def chat_page():
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.success("✅ Logged out successfully!")
-            st.rerun()
+            st.experimental_rerun()
 
     st.markdown("---")
     st.markdown("Ask me anything about **KynoHealth** based on their website!")
