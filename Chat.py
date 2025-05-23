@@ -18,31 +18,42 @@ if sys.platform.startswith('win'):
 # Load .env locally (ignored in deployment)
 load_dotenv()
 
-# Get Firebase credential path and Gemini API key from Streamlit secrets or fallback to env
-firebase_cred_dict = st.secrets.get("firebase")  # This is the full dict with keys like project_id, private_key, etc.
-if firebase_cred_dict is None:
+# Get Firebase credential from Streamlit secrets or fallback to env
+firebase_cred_raw = st.secrets.get("firebase")  # Could be dict or string
+
+if firebase_cred_raw is None:
     st.error("Firebase credentials not found in secrets!")
     st.stop()
 
-cred = credentials.Certificate(firebase_cred_dict)
-firebase_admin.initialize_app(cred)
-gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+# Parse JSON string if needed
+if isinstance(firebase_cred_raw, str):
+    try:
+        firebase_cred_dict = json.loads(firebase_cred_raw)
+    except json.JSONDecodeError as e:
+        st.error(f"Failed to parse Firebase credentials JSON: {e}")
+        st.stop()
+else:
+    firebase_cred_dict = firebase_cred_raw
 
-# Firebase init
+# Initialize Firebase app only once
 if not firebase_admin._apps:
     try:
-        firebase_cred_dict = st.secrets.get("firebase")
-        if not firebase_cred_dict:
-            st.error("Firebase credentials missing in secrets!")
-            st.stop()
         cred = credentials.Certificate(firebase_cred_dict)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"Firebase initialization failed: {e}")
         st.stop()
 
-
 db = firestore.client()
+
+# Gemini API key
+gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+
+# API Configuration
+genai.configure(api_key=gemini_api_key)
+
+# Your remaining code (MODEL_CONFIG, helper functions, UI, main, etc.) unchanged...
+
 
 # API Configuration
 genai.configure(api_key=gemini_api_key)
