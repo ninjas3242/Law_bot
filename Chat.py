@@ -70,7 +70,8 @@ Question: {question}
 
 Answer based on the context above. If not found, say "I am not sure".
 Avoid saying "Based on the provided context, it's unclear" or "context in general".
-no info, say "Contact KynoHealth (email, phone, address) to know more".
+Also provide Email, Phone number, and Address of KynoHealth if relevant.
+If no info, say "Contact KynoHealth (email, phone, address) to know more".
 """
 
     try:
